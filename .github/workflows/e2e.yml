@@ -1,0 +1,59 @@
+name: Sledge E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * 1-5'   # weekdays 07:30 IST, catches regressions from upstream deploys
+  workflow_dispatch:
+    inputs:
+      allow_data_creation:
+        description: 'Run tests that create projects'
+        type: boolean
+        default: false
+
+concurrency:
+  group: sledge-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BASE_URL: https://www.getsledge.com
+      API_URL: https://api.getsledge.com/api/v1
+      SLEDGE_EMAIL: ${{ secrets.SLEDGE_EMAIL }}
+      SLEDGE_PASSWORD: ${{ secrets.SLEDGE_PASSWORD }}
+      # PRs are read-only; projects are only created on the nightly run or when asked for
+      ALLOW_DATA_CREATION: ${{ github.event_name == 'schedule' || inputs.allow_data_creation == true }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke gate
+        run: npx playwright test --grep @smoke
+      - name: Full suite, including known-bug regressions
+        run: npx playwright test
+      - name: Test summary on the PR
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: test-results/junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14

@@ -1,0 +1,20 @@
+{
+  "name": "sledge-platform-qa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright UI + API tests for the Sledge New Project flow",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:bugs": "playwright test --grep @known-bug",
+    "auth": "playwright test --project=setup",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.0.0",
+    "dotenv": "^16.4.0",
+    "typescript": "^5.6.0"
+  }
+}

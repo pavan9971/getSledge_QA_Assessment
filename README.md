@@ -1,6 +1,6 @@
 # Sledge QA Assessment: New Project flow
 
-I tested the **Projects > Add > Create Manually** flow on [getsledge.com](https://www.getsledge.com) (production), logged 8 bugs, and automated the flow and every bug with Playwright + TypeScript.
+I tested the **Projects > Add > Create Manually** flow on [getsledge.com](https://www.getsledge.com) (production), logged 9 bugs, and automated that flow and SLG-01 to SLG-08 with Playwright + TypeScript. SLG-09 is an onboarding bug and is documented only.
 
 If you only have five minutes:
 
@@ -18,7 +18,7 @@ Creating a project is the entry point for bills, lien waivers and contracts. Wro
 2. **Tested the form field by field:** empty, whitespace only, invalid email, negative amount, end date before start date, typed address vs. autocomplete.
 3. **Created one project** (`QA-Test Project 01`, `/projects/451`) and compared what the UI showed with what `GET /api/v1/projects/:id` stored. That comparison found SLG-01 and SLG-02.
 4. **Measured instead of eyeballing:** WCAG contrast from computed colours, text truncation from `scrollWidth`, payload size, HTTP status codes.
-5. **Automated** the flow and every bug as a regression test, wired into GitHub Actions.
+5. **Automated** the New Project flow and SLG-01 to SLG-08 as regression tests, wired into GitHub Actions. SLG-09 is written up only.
 
 Environment: production, workspace "Zerostha", Chrome 157 on Windows, 1280x631 viewport, 18 Nov 2026.
 
@@ -34,8 +34,9 @@ Environment: production, workspace "Zerostha", Chrome 157 on Windows, 1280x631 v
 | SLG-06 | KPI card labels are truncated at 1280px | P3 Low |
 | SLG-07 | Project API sends a 1,536-number address embedding to the browser (87% of the payload) | P3 Low |
 | SLG-08 | Analytics proxy `/ph/*` returns 400 on every page | P3 Low |
+| [SLG-09](bug-reports/BUG-REPORT.md#slg-09) | Onboarding step 11 (mobile app sign-in) never completes on desktop web, so new users are blocked. Only bypassed by editing the URL | **P1 High** |
 
-The two P1s were prioritised because they put wrong data into saved records without telling the user.
+SLG-01 and SLG-02 were prioritised because they put wrong data into saved records without telling the user. [SLG-09](bug-reports/BUG-REPORT.md#slg-09) is also P1: a new desktop user cannot finish onboarding after signing in on the mobile app, and the only bypass is editing the URL.
 
 Each bug in the [bug report](bug-reports/BUG-REPORT.md) has steps to reproduce, actual vs. expected result, impact, and evidence. Screenshots are in [`bug-reports/screenshots/`](bug-reports/screenshots/):
 
@@ -45,7 +46,7 @@ Each bug in the [bug report](bug-reports/BUG-REPORT.md) has steps to reproduce, 
 | [`SLG-05_low-contrast-errors.jpg`](bug-reports/screenshots/SLG-05_low-contrast-errors.jpg) | Dark red validation errors on a near-black background |
 | [`SLG-06_kpi-labels-truncated.jpg`](bug-reports/screenshots/SLG-06_kpi-labels-truncated.jpg) | "Done this ...", "Nothing due t..." cut-off labels |
 
-SLG-04, SLG-07 and SLG-08 are network-level bugs, so they have no screenshot. Their evidence is the request and response (status code, payload size), described in the report and asserted by their tests.
+SLG-04, SLG-07 and SLG-08 are network-level bugs, so they have no screenshot. Their evidence is the request and response (status code, payload size), described in the report and asserted by their tests. SLG-09 has no screenshot; it was observed live on onboarding and is not in the test suite.
 
 ## How to run it
 
@@ -136,4 +137,4 @@ Pull requests are read-only. Tests that create projects run only on the nightly 
 - **Typechecked, not run end to end.** `npm run typecheck` passes and Playwright lists all 15 tests. The suite has not been run against the live site from this repository because that needs real credentials. Locators and the login steps are based on the live page as I observed it and may need small adjustments on the first run.
 - **Bug reports reflect one session.** Everything was observed on 18 Nov 2026 on production. SLG-01 reproduced 2/2 and is conditional (it depends on the top suggestion starting with the same house number), so the test uses an address that avoids it for the happy-path tests.
 - **One test record exists** on production: `QA-Test Project 01` (`/projects/451`). It holds the evidence for SLG-01 to SLG-03 and can be deleted.
-- **Scope is the New Project flow only.** Other modules were explored read-only and are not covered by tests.
+- **Scope of the tests is the New Project flow only.** SLG-09 (onboarding step 11) was found in the same session and is written up in the bug report, but it is not automated. Other modules were explored read-only and are not covered by tests.

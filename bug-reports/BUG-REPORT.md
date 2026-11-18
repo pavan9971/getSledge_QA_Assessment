@@ -26,8 +26,9 @@ Test record: **QA-Test Project 01** (`/projects/451`, JOB-0001).
 | [SLG-06](#slg-06) | KPI card labels and subtitles truncated at 1280px | P3 Low |
 | [SLG-07](#slg-07) | Project API returns a 1,536-number address embedding (87% of the payload) | P3 Low |
 | [SLG-08](#slg-08) | Analytics proxy `/ph/*` returns 400 on every page | P3 Low |
+| [SLG-09](#slg-09) | Onboarding step 11 (mobile app sign-in) never completes on desktop web, so new users are blocked. Only bypassed by editing the URL | P1 High |
 
-Each bug has a matching test in `tests/known-bugs.spec.ts`.
+SLG-01 to SLG-08 each have a matching test in `tests/known-bugs.spec.ts`. SLG-09 is on the onboarding flow, outside the New Project suite, and is not automated.
 
 ---
 
@@ -167,6 +168,40 @@ Reproduced 2/2. It happens when the top suggestion starts with the same house nu
 **Impact:** Product analytics and funnels silently lose data.
 
 **Evidence:** network log only (DevTools > Network, filter `ph`). Asserted by the SLG-08 test.
+
+---
+
+## SLG-09
+
+**Onboarding step 11 never completes after signing in on the mobile app** · P1 High
+
+**What the user does:** A new user signs up on desktop web and works through onboarding. Step 11 asks them to download the Sledge mobile app and sign in to complete the step. They do this with the same email, expecting the web onboarding to detect it and unlock the product.
+
+**Actual:**
+- The mobile app was installed and signed in with the same email used on web.
+- Back on desktop, step 11 stays incomplete. Refreshing does nothing, and there is no "I've done this" or skip option.
+- The user is stuck on `/onboarding` and cannot reach the product.
+- The only way past was editing the URL from `/onboarding` to `/company`. That loaded the full app, so the gate is enforced only in the client-side UI, not by routing or the server.
+
+**Expected:**
+- After signing in on mobile with the same account, step 11 completes on web automatically, or within a few seconds of a refresh.
+- If detection fails, the user can confirm manually or skip the mobile step and finish it later. A desktop-first user should not be blocked by a phone step.
+- If onboarding is meant to be mandatory, protected routes redirect back to the incomplete step instead of loading when the URL is typed.
+
+**Steps**
+1. Sign up on desktop web (www.getsledge.com) with a new email
+2. Complete onboarding steps 1–10
+3. At step 11, install the Sledge mobile app and sign in with the same email
+4. Return to the desktop tab and refresh. Step 11 is still incomplete
+5. Change the URL from `/onboarding` to `/company`. The app loads and onboarding is skipped
+
+**Context:** Production (www.getsledge.com). Desktop web: Chrome 157 / Windows. Mobile app: iOS 27.2.1, app version 1.0.2. Same account on both.
+
+**Impact:** Activation blocker. Every desktop-first sign-up hits a dead end at step 11. Most users will not edit the URL, so they leave before seeing the product. For a construction-office tool, many first sessions happen on a desktop. A route that can be skipped by editing the URL means onboarding state is not enforced by routing or the server, so users can enter the app without the setup later steps assume is done.
+
+**Suspected cause (unconfirmed):** the mobile sign-in event is not written to the web user's onboarding record, or the web step polls a different flag.
+
+**Evidence:** observed live. No screenshot. Not covered by the New Project tests.
 
 ---
 
